@@ -1,0 +1,32 @@
+@startuml
+title 09 - Diagramme de composants de MERLETTE
+skinparam componentStyle uml2
+
+package "Navigateur" {
+  component [React SPA] as SPA
+}
+
+package "Serveur Node.js" {
+  component [Routes Express /api] as R
+  component "Middlewares\n(auth JWT, validation,\nMulter, erreurs)" as MW
+  component "Services\n(Auth, Observation, Consensus,\nComment, Notification)" as SVC
+  component [Accès données] as REPO
+  folder "uploads/" as FS
+  interface "HTTP JSON + JWT" as IAPI
+  R - IAPI
+}
+
+database "PostgreSQL" as DB
+
+SPA ..> IAPI : requêtes REST
+SPA ..> FS : GET /uploads/*.jpg
+R --> MW
+MW --> SVC
+MW --> FS : enregistre les images
+SVC --> REPO
+REPO --> DB : SQL
+
+note bottom of DB
+  Schéma : docs/schema.sql
+end note
+@enduml

@@ -1,0 +1,3828 @@
+{
+  "info": {
+    "name": "Merlette API",
+    "description": "Scénarios de test de l'API Merlette. Lancer toute la collection dans l'ordre (Collection Runner ou Newman).\nPrérequis : base initialisée avec docs/schema.sql, API sur {{baseUrl}}, working directory Postman = dossier postman/.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test(\"Temps de réponse < 500 ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+          "if (pm.response.code >= 400) {",
+          "  pm.test(\"Format d'erreur uniforme\", () => {",
+          "    const b = pm.response.json();",
+          "    pm.expect(b).to.have.property(\"error\");",
+          "    pm.expect(b.error).to.include.keys(\"code\", \"message\");",
+          "  });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "serverUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "tokenB",
+      "value": ""
+    },
+    {
+      "key": "tokenC",
+      "value": ""
+    },
+    {
+      "key": "tokenD",
+      "value": ""
+    },
+    {
+      "key": "tokenAdmin",
+      "value": ""
+    },
+    {
+      "key": "userIdA",
+      "value": ""
+    },
+    {
+      "key": "userIdB",
+      "value": ""
+    },
+    {
+      "key": "userIdC",
+      "value": ""
+    },
+    {
+      "key": "userIdD",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "speciesId1",
+      "value": ""
+    },
+    {
+      "key": "speciesId2",
+      "value": ""
+    },
+    {
+      "key": "observationId",
+      "value": ""
+    },
+    {
+      "key": "observationId2",
+      "value": ""
+    },
+    {
+      "key": "photoUrl",
+      "value": ""
+    },
+    {
+      "key": "proposalId1",
+      "value": ""
+    },
+    {
+      "key": "proposalId2",
+      "value": ""
+    },
+    {
+      "key": "commentId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    },
+    {
+      "key": "longText",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 · Préparation",
+      "description": "Vérifie que l'API tourne et génère un identifiant unique pour cette exécution.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"runId\", Date.now().toString().slice(-8));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 · Authentification (#10, #11)",
+      "description": "Lea = observatrice, Karim/Sam/Tom = identifieurs. Couvre inscription, doublons, validation et connexion.",
+      "item": [
+        {
+          "name": "Inscription Lea",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"lea_{{runId}}\",\n  \"email\": \"lea_{{runId}}@test.local\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Renvoie un token\", () => pm.expect(b.token).to.be.a(\"string\"));",
+                  "pm.test(\"Ne renvoie pas le mot de passe\", () => { pm.expect(b.user).to.not.have.property(\"password\"); pm.expect(b.user).to.not.have.property(\"passwordHash\"); });",
+                  "pm.test(\"Rôle USER par défaut\", () => pm.expect(b.user.role).to.eql(\"USER\"));",
+                  "pm.collectionVariables.set(\"tokenA\", b.token);",
+                  "pm.collectionVariables.set(\"userIdA\", b.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscription Karim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"karim_{{runId}}\",\n  \"email\": \"karim_{{runId}}@test.local\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Renvoie un token\", () => pm.expect(b.token).to.be.a(\"string\"));",
+                  "pm.test(\"Ne renvoie pas le mot de passe\", () => { pm.expect(b.user).to.not.have.property(\"password\"); pm.expect(b.user).to.not.have.property(\"passwordHash\"); });",
+                  "pm.test(\"Rôle USER par défaut\", () => pm.expect(b.user.role).to.eql(\"USER\"));",
+                  "pm.collectionVariables.set(\"tokenB\", b.token);",
+                  "pm.collectionVariables.set(\"userIdB\", b.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscription Sam",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"sam_{{runId}}\",\n  \"email\": \"sam_{{runId}}@test.local\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Renvoie un token\", () => pm.expect(b.token).to.be.a(\"string\"));",
+                  "pm.test(\"Ne renvoie pas le mot de passe\", () => { pm.expect(b.user).to.not.have.property(\"password\"); pm.expect(b.user).to.not.have.property(\"passwordHash\"); });",
+                  "pm.test(\"Rôle USER par défaut\", () => pm.expect(b.user.role).to.eql(\"USER\"));",
+                  "pm.collectionVariables.set(\"tokenC\", b.token);",
+                  "pm.collectionVariables.set(\"userIdC\", b.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscription Tom",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"tom_{{runId}}\",\n  \"email\": \"tom_{{runId}}@test.local\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Renvoie un token\", () => pm.expect(b.token).to.be.a(\"string\"));",
+                  "pm.test(\"Ne renvoie pas le mot de passe\", () => { pm.expect(b.user).to.not.have.property(\"password\"); pm.expect(b.user).to.not.have.property(\"passwordHash\"); });",
+                  "pm.test(\"Rôle USER par défaut\", () => pm.expect(b.user.role).to.eql(\"USER\"));",
+                  "pm.collectionVariables.set(\"tokenD\", b.token);",
+                  "pm.collectionVariables.set(\"userIdD\", b.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscription - email déjà utilisé → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"autre_{{runId}}\",\n  \"email\": \"lea_{{runId}}@test.local\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error code CONFLICT\", () => pm.expect(pm.response.json().error.code).to.eql(\"CONFLICT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscription - mot de passe trop court → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"court_{{runId}}\",\n  \"email\": \"court_{{runId}}@test.local\",\n  \"password\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscription - email invalide → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"bad_{{runId}}\",\n  \"email\": \"pas-un-email\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion Lea → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lea_{{runId}}@test.local\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Token présent\", () => pm.expect(pm.response.json().token).to.be.a(\"string\"));",
+                  "pm.collectionVariables.set(\"tokenA\", pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion - mauvais mot de passe → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lea_{{runId}}@test.local\",\n  \"password\": \"Mauvais123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error code INVALID_CREDENTIALS\", () => pm.expect(pm.response.json().error.code).to.eql(\"INVALID_CREDENTIALS\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion - email inconnu → 401 (même message)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"inconnu_{{runId}}@test.local\",\n  \"password\": \"Secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error code INVALID_CREDENTIALS\", () => pm.expect(pm.response.json().error.code).to.eql(\"INVALID_CREDENTIALS\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Moi (Lea) → 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Bon utilisateur\", () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get(\"userIdA\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Moi sans token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error code UNAUTHORIZED\", () => pm.expect(pm.response.json().error.code).to.eql(\"UNAUTHORIZED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Moi avec token invalide → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{invalidToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error code UNAUTHORIZED\", () => pm.expect(pm.response.json().error.code).to.eql(\"UNAUTHORIZED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion Admin → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@merlette.local\",\n  \"password\": \"Admin1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rôle ADMIN\", () => pm.expect(pm.response.json().user.role).to.eql(\"ADMIN\"));",
+                  "pm.collectionVariables.set(\"tokenAdmin\", pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 · Référentiel (#9, #16, #20)",
+      "description": "Catégories et recherche d'espèces.",
+      "item": [
+        {
+          "name": "Lister les catégories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const cats = pm.response.json();",
+                  "pm.test(\"8 catégories ou plus\", () => pm.expect(cats.length).to.be.at.least(8));",
+                  "const oiseaux = cats.find(c => c.slug === \"oiseaux\");",
+                  "pm.test(\"Catégorie oiseaux présente\", () => pm.expect(oiseaux).to.exist);",
+                  "pm.collectionVariables.set(\"categoryId\", oiseaux.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechercher « mesange » (sans accent)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/species?q=mesange&category=oiseaux",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "mesange"
+                },
+                {
+                  "key": "category",
+                  "value": "oiseaux"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const sp = pm.response.json();",
+                  "const bleue = sp.find(s => s.scientificName === \"Cyanistes caeruleus\");",
+                  "const charbo = sp.find(s => s.scientificName === \"Parus major\");",
+                  "pm.test(\"Trouve la mésange bleue et la charbonnière\", () => { pm.expect(bleue).to.exist; pm.expect(charbo).to.exist; });",
+                  "pm.collectionVariables.set(\"speciesId1\", bleue.id);",
+                  "pm.collectionVariables.set(\"speciesId2\", charbo.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechercher par nom scientifique",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/species?q=Parus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Parus"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Parus major trouvé\", () => pm.expect(pm.response.json().map(s => s.scientificName)).to.include(\"Parus major\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recherche trop courte → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/species?q=m",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "m"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Créer une espèce (utilisateur) → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/species",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commonName\": \"Sittelle\",\n  \"scientificName\": \"Sitta test {{runId}}\",\n  \"categoryId\": {{categoryId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error code FORBIDDEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"FORBIDDEN\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Créer une espèce (admin) → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/species",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "species"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commonName\": \"Sittelle torchepot\",\n  \"scientificName\": \"Sitta europaea {{runId}}\",\n  \"categoryId\": {{categoryId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"A un id\", () => pm.expect(pm.response.json().id).to.be.a(\"number\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 · Observations (#1, #8, #13, #14, #15)",
+      "description": "Publication avec photo, validations, fil, filtres, détail et droits de modification.\nLes fichiers sont dans postman/fixtures (définir le working directory de Postman sur le dossier postman/).",
+      "item": [
+        {
+          "name": "Publier sans token → 401",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/bird.jpg"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "observedAt",
+                  "value": "2026-10-01",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Petit oiseau bleu",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Sur la mangeoire du jardin",
+                  "type": "text"
+                },
+                {
+                  "key": "locationName",
+                  "value": "Parc de la Tête d'Or",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "45.7772",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "4.8551",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error code UNAUTHORIZED\", () => pm.expect(pm.response.json().error.code).to.eql(\"UNAUTHORIZED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publier sans photo → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "observedAt",
+                  "value": "2026-10-01",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Petit oiseau bleu",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Sur la mangeoire du jardin",
+                  "type": "text"
+                },
+                {
+                  "key": "locationName",
+                  "value": "Parc de la Tête d'Or",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "45.7772",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "4.8551",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publier un fichier non-image → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/not-an-image.txt"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "observedAt",
+                  "value": "2026-10-01",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Petit oiseau bleu",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Sur la mangeoire du jardin",
+                  "type": "text"
+                },
+                {
+                  "key": "locationName",
+                  "value": "Parc de la Tête d'Or",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "45.7772",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "4.8551",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publier avec date future → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/bird.jpg"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "observedAt",
+                  "value": "2099-01-01",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Petit oiseau bleu",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Sur la mangeoire du jardin",
+                  "type": "text"
+                },
+                {
+                  "key": "locationName",
+                  "value": "Parc de la Tête d'Or",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "45.7772",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "4.8551",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publier sans catégorie → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/bird.jpg"
+                },
+                {
+                  "key": "observedAt",
+                  "value": "2026-10-01",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Petit oiseau bleu",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Sur la mangeoire du jardin",
+                  "type": "text"
+                },
+                {
+                  "key": "locationName",
+                  "value": "Parc de la Tête d'Or",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "45.7772",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "4.8551",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea publie une observation → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/bird.jpg"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "observedAt",
+                  "value": "2026-10-01",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Petit oiseau bleu",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Sur la mangeoire du jardin",
+                  "type": "text"
+                },
+                {
+                  "key": "locationName",
+                  "value": "Parc de la Tête d'Or",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "45.7772",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "4.8551",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"Statut NEEDS_ID\", () => pm.expect(o.status).to.eql(\"NEEDS_ID\"));",
+                  "pm.test(\"1 photo\", () => pm.expect(o.photos).to.have.lengthOf(1));",
+                  "pm.test(\"Auteur = Lea\", () => pm.expect(o.author.id).to.eql(Number(pm.collectionVariables.get(\"userIdA\"))));",
+                  "pm.test(\"Pas d'espèce retenue\", () => pm.expect(o.identifiedSpecies).to.be.null);",
+                  "pm.collectionVariables.set(\"observationId\", o.id);",
+                  "pm.collectionVariables.set(\"photoUrl\", o.photos[0].url);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea publie une 2e observation (pour test croisé) → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/bird.jpg"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "observedAt",
+                  "value": "2026-10-01",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Petit oiseau bleu",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Sur la mangeoire du jardin",
+                  "type": "text"
+                },
+                {
+                  "key": "locationName",
+                  "value": "Parc de la Tête d'Or",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "45.7772",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "4.8551",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"observationId2\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "La photo est accessible",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{serverUrl}}{{photoUrl}}",
+              "host": [
+                "{{serverUrl}}"
+              ],
+              "path": [
+                "{{photoUrl}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Content-Type image\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"image/\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fil récent (#8)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Pagination présente\", () => pm.expect(b.pagination).to.include.keys(\"page\", \"limit\", \"total\", \"totalPages\"));",
+                  "pm.test(\"Max 20 éléments\", () => pm.expect(b.data.length).to.be.at.most(20));",
+                  "pm.test(\"Trié du plus récent au plus ancien\", () => { const d = b.data.map(o => new Date(o.createdAt).getTime()); pm.expect(d).to.eql([...d].sort((a, c) => c - a)); });",
+                  "pm.test(\"Notre observation est dans le fil\", () => pm.expect(b.data.map(o => o.id)).to.include(Number(pm.collectionVariables.get(\"observationId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtrer oiseaux à identifier (#9)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations?category=oiseaux&status=NEEDS_ID",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "oiseaux"
+                },
+                {
+                  "key": "status",
+                  "value": "NEEDS_ID"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "pm.test(\"Uniquement des oiseaux\", () => data.forEach(o => pm.expect(o.category.slug).to.eql(\"oiseaux\")));",
+                  "pm.test(\"Uniquement NEEDS_ID\", () => data.forEach(o => pm.expect(o.status).to.eql(\"NEEDS_ID\")));",
+                  "pm.test(\"Contient notre observation\", () => pm.expect(data.map(o => o.id)).to.include(Number(pm.collectionVariables.get(\"observationId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtrer plantes → ne contient pas notre observation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations?category=plantes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "plantes"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Absente\", () => pm.expect(pm.response.json().data.map(o => o.id)).to.not.include(Number(pm.collectionVariables.get(\"observationId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Détail d'une observation (#15)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"Champs principaux présents\", () => pm.expect(o).to.include.keys(\"photos\", \"proposals\", \"category\", \"author\", \"status\", \"observedAt\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Observation inexistante → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error code NOT_FOUND\", () => pm.expect(pm.response.json().error.code).to.eql(\"NOT_FOUND\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Karim modifie l'observation de Lea → 403",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Piraté\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error code FORBIDDEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"FORBIDDEN\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea modifie son observation → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Petit oiseau bleu et jaune\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Titre mis à jour\", () => pm.expect(pm.response.json().title).to.eql(\"Petit oiseau bleu et jaune\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Karim ajoute une photo à l'observation de Lea → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/photos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "photos"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/bird.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 · Identification et consensus (#17, #4, #5)",
+      "description": "Scénario complet de la règle de consensus (≥ 3 votes ET ≥ 2/3) :\n1. Karim propose Mésange bleue (1/1) → NEEDS_ID\n2. Sam vote Mésange bleue (2/2) → NEEDS_ID\n3. Lea vote Mésange bleue (3/3) → IDENTIFIED\n4. Tom propose Charbonnière (3/4 = 75 %) → reste IDENTIFIED\n5. Sam déplace son vote vers Charbonnière (2/4) → NEEDS_ID\n6. Sam retire son vote (2/3, < 3 votes) → NEEDS_ID\n7. Sam revote Mésange bleue (3/4) → IDENTIFIED",
+      "item": [
+        {
+          "name": "Proposer sans token → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciesId\": {{speciesId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Proposer sans speciesId → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Proposer une espèce inexistante → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciesId\": 999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error code NOT_FOUND\", () => pm.expect(pm.response.json().error.code).to.eql(\"NOT_FOUND\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1. Karim propose Mésange bleue → 201, NEEDS_ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciesId\": {{speciesId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"La proposition compte comme vote\", () => pm.expect(b.proposal.votes).to.eql(1));",
+                  "pm.test(\"Statut NEEDS_ID\", () => pm.expect(b.observationStatus).to.eql(\"NEEDS_ID\"));",
+                  "pm.collectionVariables.set(\"proposalId1\", b.proposal.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sam propose la même espèce → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciesId\": {{speciesId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error code CONFLICT\", () => pm.expect(pm.response.json().error.code).to.eql(\"CONFLICT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Sam vote Mésange bleue → NEEDS_ID (2 votes)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": {{proposalId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Statut = NEEDS_ID\", () => pm.expect(pm.response.json().observationStatus).to.eql(\"NEEDS_ID\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sam revote pareil (idempotent) → NEEDS_ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": {{proposalId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Statut = NEEDS_ID\", () => pm.expect(pm.response.json().observationStatus).to.eql(\"NEEDS_ID\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Lea vote Mésange bleue → IDENTIFIED (3/3)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": {{proposalId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Statut = IDENTIFIED\", () => pm.expect(pm.response.json().observationStatus).to.eql(\"IDENTIFIED\"));",
+                  "pm.test(\"Espèce retenue = Mésange bleue\", () => pm.expect(pm.response.json().identifiedSpecies.id).to.eql(Number(pm.collectionVariables.get(\"speciesId1\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consulter les votes (#5)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"3 votes au total\", () => pm.expect(b.totalVotes).to.eql(3));",
+                  "pm.test(\"Consensus atteint\", () => pm.expect(b.consensus.reached).to.be.true);",
+                  "pm.test(\"1re proposition à 100 %\", () => { pm.expect(b.proposals[0].votes).to.eql(3); pm.expect(b.proposals[0].percent).to.eql(100); });",
+                  "pm.test(\"Liste des votants\", () => pm.expect(b.proposals[0].voters).to.have.lengthOf(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Tom propose Charbonnière → reste IDENTIFIED (3/4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenD}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciesId\": {{speciesId2}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Statut IDENTIFIED\", () => pm.expect(pm.response.json().observationStatus).to.eql(\"IDENTIFIED\"));",
+                  "pm.collectionVariables.set(\"proposalId2\", pm.response.json().proposal.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Votes triés par nombre décroissant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().proposals;",
+                  "pm.test(\"Tri décroissant\", () => pm.expect(p.map(x => x.votes)).to.eql([3, 1]));",
+                  "pm.test(\"Pourcentages 75/25\", () => pm.expect(p.map(x => x.percent)).to.eql([75, 25]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Sam déplace son vote → NEEDS_ID (2/4)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": {{proposalId2}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Statut = NEEDS_ID\", () => pm.expect(pm.response.json().observationStatus).to.eql(\"NEEDS_ID\"));",
+                  "pm.test(\"Plus d'espèce retenue\", () => pm.expect(pm.response.json().identifiedSpecies).to.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Un seul vote par utilisateur : Sam n'est plus compté sur la proposition 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Toujours 4 votes au total\", () => pm.expect(b.totalVotes).to.eql(4));",
+                  "const p1 = b.proposals.find(p => p.id === Number(pm.collectionVariables.get(\"proposalId1\")));",
+                  "pm.test(\"Sam absent des votants de la proposition 1\", () => pm.expect(p1.voters.map(v => v.id)).to.not.include(Number(pm.collectionVariables.get(\"userIdC\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Sam retire son vote → NEEDS_ID",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Statut = NEEDS_ID\", () => pm.expect(pm.response.json().observationStatus).to.eql(\"NEEDS_ID\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sam retire encore son vote → 404",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Voter sans token → 401",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": {{proposalId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Voter pour une proposition d'une autre observation → 404",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId2}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId2}}",
+                "vote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": {{proposalId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Sam revote Mésange bleue → IDENTIFIED (3/4)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/vote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "vote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": {{proposalId1}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Statut = IDENTIFIED\", () => pm.expect(pm.response.json().observationStatus).to.eql(\"IDENTIFIED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Le fil reflète le statut IDENTIFIED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations?status=IDENTIFIED&category=oiseaux",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "IDENTIFIED"
+                },
+                {
+                  "key": "category",
+                  "value": "oiseaux"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Observation présente\", () => pm.expect(pm.response.json().data.map(o => o.id)).to.include(Number(pm.collectionVariables.get(\"observationId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tom supprime sa proposition (seul votant) → 204",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenD}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proposals/{{proposalId2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proposals",
+                "{{proposalId2}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 · Commentaires (#3, #18)",
+      "description": "",
+      "item": [
+        {
+          "name": "Commenter sans token → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "comments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Bonjour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Commentaire vide → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "comments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Commentaire > 1000 caractères → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "comments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"{{longText}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error code VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"longText\", \"a\".repeat(1001));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Karim commente → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "comments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Calotte bleue et joues blanches : mésange bleue.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const c = pm.response.json();",
+                  "pm.test(\"Auteur = Karim\", () => pm.expect(c.author.id).to.eql(Number(pm.collectionVariables.get(\"userIdB\"))));",
+                  "pm.collectionVariables.set(\"commentId\", c.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sam commente → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "comments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"D'accord avec Karim.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lister les commentaires (ordre chronologique)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "comments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json();",
+                  "pm.test(\"2 commentaires\", () => pm.expect(c).to.have.lengthOf(2));",
+                  "pm.test(\"Ordre chronologique\", () => pm.expect(new Date(c[0].createdAt) <= new Date(c[1].createdAt)).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sam modifie le commentaire de Karim → 403",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "comments",
+                "{{commentId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Modifié\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error code FORBIDDEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"FORBIDDEN\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Karim modifie son commentaire → 200 (edited)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "comments",
+                "{{commentId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Calotte bleue, joues blanches, ventre jaune : mésange bleue.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Marqué modifié\", () => pm.expect(pm.response.json().edited).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 · Notifications (#6)",
+      "description": "Lea doit avoir reçu : 2 NEW_PROPOSAL (Karim, Tom), NEW_COMMENT, OBSERVATION_IDENTIFIED.\nKarim doit avoir reçu OBSERVATION_IDENTIFIED (proposeur retenu) et NEW_COMMENT (commentaire de Sam).",
+      "item": [
+        {
+          "name": "Lea : nombre de non lues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Au moins 4\", () => pm.expect(pm.response.json().count).to.be.at.least(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea : liste des non lues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?unread=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "unread",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const types = d.map(n => n.type);",
+                  "pm.test(\"Contient les 3 types\", () => pm.expect(types).to.include.members([\"NEW_PROPOSAL\", \"NEW_COMMENT\", \"OBSERVATION_IDENTIFIED\"]));",
+                  "pm.test(\"Toutes non lues\", () => d.forEach(n => pm.expect(n.isRead).to.be.false));",
+                  "pm.test(\"Pas de notification pour ses propres actions\", () => d.forEach(n => pm.expect(n.actor && n.actor.id).to.not.eql(Number(pm.collectionVariables.get(\"userIdA\")))));",
+                  "pm.collectionVariables.set(\"notificationId\", d[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Karim : notifié de l'identification et du commentaire de Sam",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const types = pm.response.json().data.map(n => n.type);",
+                  "pm.test(\"OBSERVATION_IDENTIFIED\", () => pm.expect(types).to.include(\"OBSERVATION_IDENTIFIED\"));",
+                  "pm.test(\"NEW_COMMENT\", () => pm.expect(types).to.include(\"NEW_COMMENT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notifications sans token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sam lit la notification de Lea → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea marque une notification comme lue",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"isRead = true\", () => pm.expect(pm.response.json().isRead).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea marque tout comme lu",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Au moins 3 mises à jour\", () => pm.expect(pm.response.json().updated).to.be.at.least(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea : 0 non lue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"count = 0\", () => pm.expect(pm.response.json().count).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 · Profil et discussions (#10, #12, #14)",
+      "description": "",
+      "item": [
+        {
+          "name": "Karim : mes discussions contient l'observation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "conversations"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Observation présente\", () => pm.expect(pm.response.json().data.map(c => c.observationId)).to.include(Number(pm.collectionVariables.get(\"observationId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tom : mes discussions → 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenD}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "conversations"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea : mes observations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "observations"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.map(o => o.id);",
+                  "pm.test(\"Contient ses 2 observations\", () => pm.expect(ids).to.include.members([Number(pm.collectionVariables.get(\"observationId\")), Number(pm.collectionVariables.get(\"observationId2\"))]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profil public de Lea",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userIdA}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userIdA}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const u = pm.response.json();",
+                  "pm.test(\"2 observations\", () => pm.expect(u.stats.observations).to.eql(2));",
+                  "pm.test(\"Email non exposé\", () => pm.expect(u).to.not.have.property(\"email\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea modifie sa bio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Randonneuse curieuse\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Bio mise à jour\", () => pm.expect(pm.response.json().bio).to.eql(\"Randonneuse curieuse\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 · Suppression et modération (#14, #18, #19)",
+      "description": "",
+      "item": [
+        {
+          "name": "Sam supprime le commentaire de Karim → 403",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenC}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "comments",
+                "{{commentId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Karim supprime son commentaire → 204",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "comments",
+                "{{commentId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Karim supprime l'observation de Lea → 403",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin supprime la 2e observation (modération) → 204",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId2}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lea supprime son observation → 204",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Observation supprimée → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Propositions supprimées en cascade → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/observations/{{observationId}}/proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations",
+                "{{observationId}}",
+                "proposals"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

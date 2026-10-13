@@ -1,0 +1,19 @@
+@startuml
+title 07 - Machine d'états d'une OBSERVATION
+hide empty description
+skinparam state {
+  BackgroundColor #D0E7FB
+}
+
+[*] --> NEEDS_ID : publication
+NEEDS_ID --> NEEDS_ID : proposition / vote [pas de consensus]
+NEEDS_ID --> IDENTIFIED : vote [meilleure >= 3 votes ET >= 2/3] / ^notifier auteur
+IDENTIFIED --> IDENTIFIED : vote [consensus maintenu]
+IDENTIFIED --> NEEDS_ID : vote déplacé ou retiré [consensus perdu]
+NEEDS_ID --> [*] : suppression
+IDENTIFIED --> [*] : suppression
+
+NEEDS_ID : affichée « À identifier »
+IDENTIFIED : affichée « Identifiée »
+IDENTIFIED : identified_species_id renseigné
+@enduml

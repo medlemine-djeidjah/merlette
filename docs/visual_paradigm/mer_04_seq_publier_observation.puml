@@ -1,0 +1,32 @@
+@startuml
+title 04 - Séquence : publier une observation (#1, #13)
+autonumber
+actor Observateur as O
+participant "Front React" as F
+participant "API Express" as API
+participant "Multer (uploads/)" as M
+database PostgreSQL as DB
+
+O -> F : choisit photos, catégorie, date, lieu
+F -> API : POST /api/observations (multipart + Bearer)
+API -> API : vérifie le JWT
+API -> M : enregistre les fichiers
+M --> API : chemins des fichiers
+API -> API : valide (1 à 5 photos, catégorie, date <= aujourd'hui)
+alt données valides
+  API -> DB : BEGIN
+  API -> DB : INSERT observations (status = NEEDS_ID)
+  API -> DB : INSERT photos (x N)
+  API -> DB : COMMIT
+  API --> F : 201 {observation}
+  F --> O : affiche la page détail
+else données invalides
+  API -> M : supprime les fichiers reçus
+  API --> F : 400 VALIDATION_ERROR
+  F --> O : affiche les erreurs
+end
+note right of M
+  JPEG / PNG / WEBP
+  5 Mo maximum par photo
+end note
+@enduml

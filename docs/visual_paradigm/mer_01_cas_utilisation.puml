@@ -1,0 +1,84 @@
+@startuml
+title 01 - Diagramme de cas d'utilisation de MERLETTE
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #D0E7FB
+}
+
+actor Visiteur
+actor Utilisateur
+actor Observateur
+actor Identifieur
+actor Administrateur
+
+rectangle MERLETTE {
+  rectangle "Consultation" {
+    usecase "Consulter les observations\nrécentes (#8)" as UC8
+    usecase "Filtrer par catégorie (#9)" as UC9
+    usecase "Voir le détail\nd'une observation (#15)" as UC15
+    usecase "Consulter les votes (#5)" as UC5
+  }
+  rectangle "Compte" {
+    usecase "Créer un compte (#11)" as UC11
+    usecase "Se connecter (#10)" as UC10
+    usecase "Voir mes discussions (#10)" as UC10b
+    usecase "Gérer son profil (#12)" as UC12
+  }
+  rectangle "Observation" {
+    usecase "Poster une observation\navec images (#1)" as UC1
+    usecase "Décrire l'observation (#13)" as UC13
+    usecase "Gérer ses observations (#14)" as UC14
+    usecase "Être notifié (#6)" as UC6
+  }
+  rectangle "Identification" {
+    usecase "Commenter (#3)" as UC3
+    usecase "Proposer une espèce (#17)" as UC17
+    usecase "Rechercher une espèce (#16)" as UC16
+    usecase "Voter (#4)" as UC4
+    usecase "Calculer le consensus" as UCC
+  }
+  rectangle "Administration" {
+    usecase "Modérer le contenu (#19)" as UC19
+    usecase "Gérer le référentiel (#20)" as UC20
+  }
+}
+
+Visiteur <|-right- Utilisateur
+Utilisateur <|-right- Observateur
+Utilisateur <|-right- Identifieur
+Utilisateur <|-right- Administrateur
+
+Visiteur --> UC8
+Visiteur --> UC15
+Visiteur --> UC5
+Visiteur --> UC11
+Visiteur --> UC10
+Utilisateur --> UC10b
+Utilisateur --> UC12
+Observateur --> UC1
+Observateur --> UC14
+Observateur --> UC6
+Identifieur --> UC3
+Identifieur --> UC17
+Identifieur --> UC4
+Administrateur --> UC19
+Administrateur --> UC20
+
+UC8 <.. UC9 : <<extend>>
+UC1 ..> UC13 : <<include>>
+UC17 ..> UC16 : <<include>>
+UC17 ..> UC4 : <<include>>
+UC4 ..> UCC : <<include>>
+
+note right of UCC
+  Consensus atteint si la meilleure
+  proposition a >= 3 votes
+  ET >= 2/3 des votes.
+end note
+
+note left of Utilisateur
+  Un même compte est à la fois
+  observateur et identifieur.
+end note
+@enduml

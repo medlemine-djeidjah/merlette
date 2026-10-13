@@ -1,0 +1,25 @@
+@startuml
+title 06 - Séquence : notifications par polling (#6)
+autonumber
+actor Observateur as O
+participant "Front React" as F
+participant "API Express" as API
+database PostgreSQL as DB
+
+loop toutes les 30 secondes
+  F -> API : GET /api/notifications/unread-count
+  API -> DB : SELECT COUNT(*) WHERE is_read = false
+  DB --> API : 2
+  API --> F : {count: 2}
+  F --> O : badge cloche = 2
+end
+O -> F : clique sur une notification
+F -> API : PATCH /api/notifications/15/read
+API -> DB : UPDATE notifications SET is_read = true
+API --> F : 200
+F --> O : ouvre /observations/42
+note right of F
+  Polling plutôt que WebSocket :
+  plus simple pour un prototype.
+end note
+@enduml

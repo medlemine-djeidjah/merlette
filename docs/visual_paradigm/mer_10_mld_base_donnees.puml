@@ -1,0 +1,110 @@
+@startuml
+title 10 - Modèle logique de données (PostgreSQL)
+hide circle
+hide empty methods
+skinparam classAttributeIconSize 0
+
+class users <<table>> {
+  {field} PK id : SERIAL
+  {field} UK username : VARCHAR(30)
+  {field} UK email : VARCHAR(255)
+  {field} password_hash : VARCHAR(255)
+  {field} role : user_role
+  {field} avatar_url : VARCHAR(500)
+  {field} bio : VARCHAR(500)
+  {field} created_at : TIMESTAMPTZ
+}
+class categories <<table>> {
+  {field} PK id : SERIAL
+  {field} UK name : VARCHAR(50)
+  {field} UK slug : VARCHAR(50)
+}
+class species <<table>> {
+  {field} PK id : SERIAL
+  {field} common_name : VARCHAR(150)
+  {field} UK scientific_name : VARCHAR(150)
+  {field} FK category_id : INT
+}
+class observations <<table>> #FFF7CC {
+  {field} PK id : SERIAL
+  {field} FK user_id : INT
+  {field} FK category_id : INT
+  {field} title : VARCHAR(120)
+  {field} description : TEXT
+  {field} observed_at : DATE
+  {field} location_name : VARCHAR(200)
+  {field} latitude : NUMERIC(9,6)
+  {field} longitude : NUMERIC(9,6)
+  {field} status : observation_status
+  {field} FK identified_species_id : INT
+  {field} created_at : TIMESTAMPTZ
+  {field} updated_at : TIMESTAMPTZ
+}
+class photos <<table>> {
+  {field} PK id : SERIAL
+  {field} FK observation_id : INT
+  {field} url : VARCHAR(500)
+  {field} position : SMALLINT
+  {field} created_at : TIMESTAMPTZ
+}
+class proposals <<table>> {
+  {field} PK id : SERIAL
+  {field} FK observation_id : INT
+  {field} FK species_id : INT
+  {field} FK user_id : INT
+  {field} created_at : TIMESTAMPTZ
+}
+class votes <<table>> {
+  {field} PK id : SERIAL
+  {field} FK observation_id : INT
+  {field} FK proposal_id : INT
+  {field} FK user_id : INT
+  {field} created_at : TIMESTAMPTZ
+}
+class comments <<table>> {
+  {field} PK id : SERIAL
+  {field} FK observation_id : INT
+  {field} FK user_id : INT
+  {field} content : VARCHAR(1000)
+  {field} created_at : TIMESTAMPTZ
+  {field} updated_at : TIMESTAMPTZ
+}
+class notifications <<table>> {
+  {field} PK id : SERIAL
+  {field} FK user_id : INT
+  {field} FK actor_id : INT
+  {field} FK observation_id : INT
+  {field} type : notification_type
+  {field} message : VARCHAR(300)
+  {field} is_read : BOOLEAN
+  {field} created_at : TIMESTAMPTZ
+}
+
+users "1" -- "0..*" observations
+users "1" -- "0..*" proposals
+users "1" -- "0..*" votes
+users "1" -- "0..*" comments
+users "1" -- "0..*" notifications
+categories "1" -- "0..*" species
+categories "1" -- "0..*" observations
+species "1" -- "0..*" proposals
+species "0..1" -- "0..*" observations : identified_species_id
+observations "1" -- "1..5" photos
+observations "1" -- "0..*" proposals
+observations "1" -- "0..*" comments
+observations "0..1" -- "0..*" notifications
+proposals "1" -- "0..*" votes
+
+note bottom of votes
+  UNIQUE (observation_id, user_id)
+  FK (proposal_id, observation_id)
+  -> proposals (id, observation_id)
+end note
+note bottom of proposals
+  UNIQUE (observation_id, species_id)
+end note
+note right of observations
+  CHECK : status = IDENTIFIED
+  <=> identified_species_id NOT NULL
+end note
+@enduml

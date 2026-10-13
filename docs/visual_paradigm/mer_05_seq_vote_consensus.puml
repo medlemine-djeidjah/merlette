@@ -1,0 +1,31 @@
+@startuml
+title 05 - Séquence : proposer une espèce, voter et consensus (#17, #4, #6)
+autonumber
+actor Identifieur as I
+participant "API Express" as API
+participant ConsensusService as S
+participant NotificationService as N
+database PostgreSQL as DB
+
+I -> API : POST /observations/42/proposals {speciesId: 7}
+API -> DB : INSERT proposals (obs 42, espèce 7)
+API -> DB : UPSERT votes (obs 42, identifieur)
+API -> N : notifier(auteur, NEW_PROPOSAL)
+N -> DB : INSERT notifications
+API -> S : recompute(42)
+S -> DB : SELECT proposal_id, COUNT(*) FROM votes GROUP BY proposal_id
+DB --> S : votes par proposition
+S -> S : meilleure >= 3 votes ET >= 2/3 ?
+alt consensus atteint (statut était NEEDS_ID)
+  S -> DB : UPDATE observations SET status = IDENTIFIED
+  S -> N : notifier(auteur + proposeur, OBSERVATION_IDENTIFIED)
+  N -> DB : INSERT notifications
+else consensus perdu (statut était IDENTIFIED)
+  S -> DB : UPDATE observations SET status = NEEDS_ID
+end
+API --> I : 201 {proposal, observationStatus}
+note over S
+  Exemple : 3 votes sur 4 = 75 %
+  donc consensus atteint.
+end note
+@enduml

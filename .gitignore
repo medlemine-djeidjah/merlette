@@ -1,0 +1,25 @@
+# Merlette — règles communes (chaque sous-projet a aussi son .gitignore)
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+
+# Éditeurs
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Logs
+*.log
+
+# Fichiers temporaires Visual Paradigm / PlantUML
+*.vbak
+*.vpp.bak_*
+*.vpp.lck

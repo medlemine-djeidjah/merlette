@@ -1,0 +1,118 @@
+@startuml
+title 02 - Diagramme de classes du domaine MERLETTE
+hide circle
+skinparam classAttributeIconSize 0
+
+enum Role <<enumeration>> {
+  USER
+  ADMIN
+}
+enum ObservationStatus <<enumeration>> {
+  NEEDS_ID
+  IDENTIFIED
+}
+enum NotificationType <<enumeration>> {
+  NEW_PROPOSAL
+  NEW_COMMENT
+  OBSERVATION_IDENTIFIED
+}
+
+class User {
+  - id : int
+  - username : String
+  - email : String
+  - passwordHash : String
+  - role : Role
+  - avatarUrl : String
+  - bio : String
+  - createdAt : DateTime
+  + register() : User
+  + login() : String
+}
+
+class Category {
+  - id : int
+  - name : String
+  - slug : String
+}
+
+class Species {
+  - id : int
+  - commonName : String
+  - scientificName : String
+}
+
+class Observation #FFF7CC {
+  - id : int
+  - title : String
+  - description : String
+  - observedAt : Date
+  - locationName : String
+  - latitude : float
+  - longitude : float
+  - status : ObservationStatus
+  - createdAt : DateTime
+  + recomputeConsensus() : void
+}
+
+class Photo {
+  - id : int
+  - url : String
+  - position : int
+}
+
+class Proposal {
+  - id : int
+  - createdAt : DateTime
+  + voteCount() : int
+}
+
+class Vote {
+  - id : int
+  - createdAt : DateTime
+}
+
+class Comment {
+  - id : int
+  - content : String
+  - createdAt : DateTime
+  - updatedAt : DateTime
+}
+
+class Notification {
+  - id : int
+  - type : NotificationType
+  - message : String
+  - isRead : boolean
+  - createdAt : DateTime
+  + markAsRead() : void
+}
+
+User "1" -- "0..*" Observation : publie >
+User "1" -- "0..*" Proposal : propose >
+User "1" -- "0..*" Vote : émet >
+User "1" -- "0..*" Comment : écrit >
+User "1" -- "0..*" Notification : reçoit >
+Category "1" -- "0..*" Species : regroupe >
+Category "1" -- "0..*" Observation : classe >
+Observation "1" *-- "1..5" Photo : contient
+Observation "1" *-- "0..*" Proposal : reçoit
+Observation "1" *-- "0..*" Comment : reçoit
+Observation "0..*" -- "0..1" Species : identifiée comme >
+Proposal "0..*" -- "1" Species : suggère >
+Proposal "1" *-- "0..*" Vote : reçoit
+Notification "0..*" -- "0..1" Observation : concerne >
+
+User ..> Role
+Observation ..> ObservationStatus
+Notification ..> NotificationType
+
+note bottom of Vote
+  {unique} un seul vote par
+  utilisateur et par observation
+end note
+note right of Proposal
+  {unique} une espèce n'est proposée
+  qu'une fois par observation
+end note
+@enduml

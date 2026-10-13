@@ -1,0 +1,26 @@
+@startuml
+title 03 - Séquence : connexion (#10)
+autonumber
+actor Utilisateur as U
+participant "Front React" as F
+participant "API Express" as API
+database PostgreSQL as DB
+
+U -> F : saisit email + mot de passe
+F -> API : POST /api/auth/login {email, password}
+API -> DB : SELECT * FROM users WHERE email = ?
+DB --> API : user ou aucun résultat
+alt utilisateur trouvé et mot de passe correct
+  API -> API : bcrypt.compare() puis jwt.sign(24h)
+  API --> F : 200 {token, user}
+  F -> F : stocke le token
+  F --> U : redirige vers l'accueil
+else identifiants invalides
+  API --> F : 401 INVALID_CREDENTIALS
+  F --> U : "Email ou mot de passe incorrect"
+end
+note over API
+  Même message d'erreur que l'email
+  soit inconnu ou le mot de passe faux.
+end note
+@enduml

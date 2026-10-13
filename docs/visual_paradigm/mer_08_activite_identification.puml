@@ -1,0 +1,31 @@
+@startuml
+title 08 - Diagramme d'activité : cycle d'identification
+skinparam ActivityBackgroundColor #D0E7FB
+
+|Observateur|
+start
+:Publier une observation;
+|Système|
+:Ajouter l'observation au fil « Récentes »;
+|Identifieur|
+:Filtrer par catégorie;
+:Ouvrir le détail;
+repeat
+  if (Espèce déjà proposée ?) then (oui)
+    :Voter pour la proposition;
+  else (non)
+    :Rechercher l'espèce;
+    :Proposer l'espèce (vote automatique);
+    |Système|
+    :Notifier l'observateur;
+  endif
+  |Système|
+  :Recalculer le consensus;
+repeat while (>= 3 votes ET >= 2/3 ?) is (non)
+->oui;
+:Passer l'observation à « Identifiée »;
+:Notifier l'observateur et le proposeur;
+|Observateur|
+:Consulter l'identification;
+stop
+@enduml
