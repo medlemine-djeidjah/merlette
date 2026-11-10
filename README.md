@@ -1,5 +1,8 @@
 # Merlette
 
+Développement en cours : [lot 1 — installation, tests et API](docs/developpement-lot1.md).
+Inscription, connexion JWT, publication avec photos, fil filtré et consultation des observations.
+
 Plateforme communautaire d'observation et d'identification d'espèces (science participative) — projet scolaire.
 
 | Dossier | Contenu |

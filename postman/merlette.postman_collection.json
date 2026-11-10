@@ -25,11 +25,11 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000/api"
+      "value": "http://localhost:8080/api"
     },
     {
       "key": "serverUrl",
-      "value": "http://localhost:3000"
+      "value": "http://localhost:8080"
     },
     {
       "key": "runId",
