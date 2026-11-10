@@ -1,66 +1,43 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router'
-import { getCategories } from '../../api/categories'
-import { getMyObservations, getObservations } from '../../api/observations'
-import { errorMessage } from '../../api/client'
+import { getObservations } from '../../api/observations'
 import { useAuth } from '../../hooks/useAuth'
 import ObservationCard from './ObservationCard'
+import ObservationFilters from './ObservationFilters'
+import Pagination from '../common/Pagination'
+import { EmptyState, ErrorState, Loading } from '../common/Feedback'
+import Icon from '../common/Icon'
 
 export default function ObservationFeed({ mine = false }: { mine?: boolean }) {
   const [params, setParams] = useSearchParams()
   const { user } = useAuth()
   const rawPage = Number(params.get('page') || 1)
-  const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1
+  const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1
   const category = params.get('category') || ''
-  const status = params.get('status') || ''
-  const categories = useQuery({ queryKey: ['categories'], queryFn: getCategories })
+  const status = ['NEEDS_ID', 'IDENTIFIED'].includes(params.get('status') || '') ? params.get('status')! : ''
+  const sort = params.get('sort') === 'oldest' ? 'oldest' : 'recent'
   const feed = useQuery({
-    queryKey: ['observations', mine ? user?.id : 'all', page, category, status],
-    queryFn: () => mine ? getMyObservations(page) : getObservations({ page, ...(category && { category }), ...(status && { status }) }),
+    queryKey: ['observations', mine ? user?.id : 'all', page, category, status, sort],
+    queryFn: () => getObservations({ page, limit: 12, sort, ...(category && { category }), ...(status && { status }), ...(mine && user && { userId: user.id }) }),
+    enabled: !mine || !!user, placeholderData: keepPreviousData,
   })
   function filter(key: string, value: string) {
-    setParams(previous => {
-      const next = new URLSearchParams(previous)
-      if (value) next.set(key, value); else next.delete(key)
-      next.delete('page'); return next
-    })
+    setParams(previous => { const next = new URLSearchParams(previous); if (value) next.set(key, value); else next.delete(key); next.delete('page'); return next })
   }
   function go(nextPage: number) {
     setParams(previous => { const next = new URLSearchParams(previous); next.set('page', String(nextPage)); return next })
+    document.getElementById('observations')?.scrollIntoView({ behavior: 'instant', block: 'start' })
   }
-  return <section className="space-y-6 py-6">
-    <header className="space-y-2">
-      <h1 className="text-3xl font-bold">{mine ? 'Mes observations' : 'La nature, observée ensemble'}</h1>
-      <p>{mine ? 'Retrouve les découvertes que tu as partagées.' : 'Explore les découvertes de la communauté et partage les tiennes.'}</p>
-    </header>
-    {!mine && <div className="flex flex-wrap gap-4">
-      <label className="flex flex-col gap-1">Catégorie
-        <select className="select" value={category} onChange={e => filter('category', e.target.value)}>
-          <option value="">Toutes les catégories</option>
-          {categories.data?.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1">Statut
-        <select className="select" value={status} onChange={e => filter('status', e.target.value)}>
-          <option value="">Tous les statuts</option><option value="NEEDS_ID">À identifier</option><option value="IDENTIFIED">Identifiées</option>
-        </select>
-      </label>
+  return <section id="observations" className={mine ? '' : 'feed-section'}>
+    {mine ? <header className="page-heading section-heading"><div><span className="eyebrow">Mon carnet de terrain</span><h1>Mes observations</h1><p>Toutes vos rencontres, au même endroit.</p></div><Link className="button button-small" to="/observations/new"><Icon name="plus" size={16} />Nouvelle observation</Link></header>
+      : <div className="section-heading feed-heading"><h2>Explorer les observations</h2><span className="eyebrow">Le carnet de la communauté</span></div>}
+    <ObservationFilters category={category} status={status} sort={sort} onChange={filter} />
+    {feed.isPending && <Loading cards />}
+    {feed.isError && <ErrorState error={feed.error} retry={() => feed.refetch()} />}
+    {feed.data && !feed.isError && <div aria-busy={feed.isFetching} style={{ opacity: feed.isPlaceholderData ? .55 : 1 }}>
+      <div className="results-line" aria-live="polite"><span>{feed.data.pagination.total} observation{feed.data.pagination.total > 1 ? 's' : ''}{feed.isFetching ? ' · Actualisation…' : ''}</span>{(category || status) && <button className="text-link" onClick={() => setParams({})}>Effacer les filtres</button>}</div>
+      {feed.data.data.length ? <div className="observation-grid">{feed.data.data.map(o => <ObservationCard key={o.id} observation={o} />)}</div> : <EmptyState title={category || status ? 'La découverte se fait attendre' : 'Le carnet ne demande qu’à s’ouvrir'} action={<Link className="button" to="/observations/new"><Icon name="plus" size={16} />Partager une observation</Link>}>{category || status ? 'Aucune observation ne correspond à ces filtres. Essayez une autre catégorie ou un autre statut.' : 'Une rencontre au jardin ou au détour d’un sentier ? Soyez la première personne à la partager.'}</EmptyState>}
+      <Pagination pagination={feed.data.pagination} onChange={go} />
     </div>}
-    {categories.isError && <p role="alert">{errorMessage(categories.error)}</p>}
-    {feed.isPending && <p role="status">Chargement des observations…</p>}
-    {feed.isError && <div role="alert" className="alert alert-error">{errorMessage(feed.error)} <button className="btn btn-sm" onClick={() => feed.refetch()}>Réessayer</button></div>}
-    {feed.data && <>
-      <p className="text-sm opacity-70">{feed.data.pagination.total} observation(s)</p>
-      {feed.data.data.length ? <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {feed.data.data.map(o => <ObservationCard key={o.id} observation={o} />)}
-      </div> : <div className="rounded-box bg-base-100 p-8 text-center">
-        <p>Aucune observation pour le moment.</p><Link className="btn btn-primary mt-4" to="/observations/new">Partager une découverte</Link>
-      </div>}
-      {feed.data.pagination.totalPages > 1 && <nav aria-label="Pagination" className="flex items-center justify-center gap-4">
-        <button className="btn" disabled={page <= 1} onClick={() => go(page - 1)}>Précédent</button>
-        <span>Page {page} sur {feed.data.pagination.totalPages}</span>
-        <button className="btn" disabled={page >= feed.data.pagination.totalPages} onClick={() => go(page + 1)}>Suivant</button>
-      </nav>}
-    </>}
   </section>
 }

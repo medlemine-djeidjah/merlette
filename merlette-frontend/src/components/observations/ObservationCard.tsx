@@ -1,20 +1,16 @@
-// Carte du fil : photo, catégorie, statut, auteur, compteurs (#8)
-// TODO
-
 import { Link } from 'react-router'
 import type { Observation } from '../../types'
-import { imageUrl } from '../../api/client'
+import { formatDate } from '../../utils/format'
+import Avatar from '../common/Avatar'
+import Icon from '../common/Icon'
+import Photo from '../common/Photo'
+import StatusBadge from './StatusBadge'
 export default function ObservationCard({ observation: o }: { observation: Observation }) {
-  return <article className="card overflow-hidden bg-base-100 shadow-sm">
-    <Link to={`/observations/${o.id}`} className="block">
-      {o.coverUrl && <img className="aspect-[4/3] w-full object-cover" src={imageUrl(o.coverUrl)} alt={o.title || 'Observation naturaliste'} loading="lazy" />}
-      <div className="card-body gap-2">
-        <span className="badge badge-outline">{o.category.name}</span>
-        <h2 className="card-title">{o.title || `Observation #${o.id}`}</h2>
-        <p className="text-sm">Par {o.author.username} · {new Date(`${o.observedAt}T12:00:00`).toLocaleDateString('fr-FR')}</p>
-        <span className="badge badge-soft">{o.status === 'NEEDS_ID' ? 'À identifier' : 'Identifiée'}</span>
-        {o.locationName && <p>{o.locationName}</p>}
-      </div>
-    </Link>
-  </article>
+  return <article className="observation-card"><Link to={`/observations/${o.id}`} aria-label={`Voir ${o.title || `l’observation ${o.id}`}`}>
+    <div className="card-photo"><Photo path={o.coverUrl} alt={o.title || 'Observation naturaliste'} /><span className="card-category">{o.category.name}</span></div>
+    <div className="card-content"><div className="card-title-row"><h3>{o.title || o.identifiedSpecies?.commonName || 'Une rencontre avec le vivant'}</h3><StatusBadge status={o.status} /></div>
+      <div className="card-author"><Avatar name={o.author.username} /><span>@{o.author.username}</span><time dateTime={o.observedAt}>· {formatDate(o.observedAt, { day: 'numeric', month: 'short' })}</time></div>
+      <div className="card-bottom"><span className="location-small"><Icon name="pin" size={12} />{o.locationName || 'Lieu non précisé'}</span><span className="card-metrics"><span aria-label={o.commentCount == null ? 'Nombre de commentaires indisponible' : `${o.commentCount} commentaires`} title="Commentaires"><Icon name="chat" size={12} />{o.commentCount ?? '—'}</span><span aria-label={o.proposalCount == null ? 'Nombre de propositions indisponible' : `${o.proposalCount} propositions`} title="Propositions"><Icon name="leaf" size={12} />{o.proposalCount ?? '—'}</span></span></div>
+    </div>
+  </Link></article>
 }

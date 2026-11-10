@@ -1,0 +1,9 @@
+import { Link } from 'react-router'
+import Icon from '../components/common/Icon'
+export default function HowItWorksPage() {
+  return <><header className="page-heading"><span className="eyebrow">La curiosité en commun</span><h1>Un regard. Une rencontre.<br />Une découverte partagée.</h1><p>Merlette rassemble les personnes qui aiment observer la nature et celles qui aiment la reconnaître. Aucun diplôme de naturaliste requis.</p></header><div className="how-grid">
+    <article className="how-step"><div className="eyebrow">01 / Observer</div><Icon name="camera" size={30} /><h2>Levez les yeux.</h2><p>Prenez de une à cinq photos nettes. Ajoutez la date, une catégorie et, si vous le souhaitez, le lieu et quelques détails.</p></article>
+    <article className="how-step"><div className="eyebrow">02 / Partager</div><Icon name="chat" size={30} /><h2>Croisez les regards.</h2><p>La communauté pourra proposer une espèce, échanger des indices et voter pour l’identification qui lui semble la plus juste.</p></article>
+    <article className="how-step"><div className="eyebrow">03 / Comprendre</div><Icon name="leaf" size={30} /><h2>Mettez un nom.</h2><p>Chaque observation devient une occasion d’apprendre. Retrouvez vos découvertes et suivez les discussions dans votre espace.</p></article>
+  </div><section className="consensus-note"><h2>Plusieurs avis, une identification commune.</h2><p>Une observation est identifiée lorsqu’une proposition rassemble au moins trois votes et au moins deux tiers des votes exprimés. Ce consensus peut évoluer si de nouveaux avis arrivent. Il s’agit d’une identification communautaire, à considérer avec discernement.</p><Link className="button" style={{ marginTop: 24 }} to="/observations/new">Partager ma première observation <Icon name="arrow" size={16} /></Link></section></>
+}

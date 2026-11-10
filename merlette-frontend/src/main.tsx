@@ -6,7 +6,7 @@ import { router } from './router'
 import './index.css'
 import { AuthProvider } from './context/AuthContext'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30000, retry: 1, refetchOnWindowFocus: true } } })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

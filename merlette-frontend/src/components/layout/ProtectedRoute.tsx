@@ -1,11 +1,11 @@
-// Redirige vers /login si non connecté
-// TODO
-
-import { Navigate, Outlet, useLocation } from 'react-router'
+import { Link, Navigate, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../hooks/useAuth'
-export default function ProtectedRoute() {
+import { Loading } from '../common/Feedback'
+export default function ProtectedRoute({ admin = false }: { admin?: boolean }) {
   const { user, loading } = useAuth()
   const location = useLocation()
-  if (loading) return <p role="status">Vérification de la session…</p>
-  return user ? <Outlet /> : <Navigate to="/login" state={{ from: location.pathname }} replace />
+  if (loading) return <div className="page-heading"><Loading /></div>
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />
+  if (admin && user.role !== 'ADMIN') return <section className="page-heading"><span className="eyebrow">Administration</span><h1>Un espace réservé</h1><p>Cette page est réservée à l’équipe d’administration.</p><Link className="button button-secondary" style={{ marginTop: 24 }} to="/me/observations">Retour à mon carnet</Link></section>
+  return <Outlet />
 }
