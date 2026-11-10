@@ -1,9 +1,7 @@
-// Contexte d'authentification : utilisateur courant, token, login(), logout()
-// TODO
-
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import axios from 'axios'
 import { currentUser } from '../api/auth'
 import { TOKEN_KEY, errorMessage } from '../api/client'
 import type { Session, User } from '../types'
@@ -12,23 +10,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY))
   const [sessionError, setSessionError] = useState('')
+  const generation = useRef(0)
+  const controller = useRef<AbortController | null>(null)
   const cache = useQueryClient()
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY); setUser(null); cache.clear()
+    generation.current++; controller.current?.abort()
+    localStorage.removeItem(TOKEN_KEY)
+    setUser(null); setLoading(false); setSessionError(''); cache.clear()
   }, [cache])
   useEffect(() => {
+    const version = generation.current
     let active = true
-    window.addEventListener('merlette:session-expired', logout)
+    const request = new AbortController()
+    controller.current = request
+    const expired = () => { logout(); setSessionError('Votre session a expiré. Connectez-vous pour retrouver votre carnet.') }
+    window.addEventListener('merlette:session-expired', expired)
     if (localStorage.getItem(TOKEN_KEY)) {
-      currentUser().then(value => { if (active) setUser(value) })
-        .catch(error => { if (active) setSessionError(errorMessage(error)) })
-        .finally(() => { if (active) setLoading(false) })
+      currentUser(request.signal).then(value => { if (active && version === generation.current) setUser(value) })
+        .catch(error => { if (active && version === generation.current && !axios.isCancel(error)) setSessionError(errorMessage(error)) })
+        .finally(() => { if (active && version === generation.current) setLoading(false) })
     }
-    return () => { active = false; window.removeEventListener('merlette:session-expired', logout) }
+    return () => { active = false; request.abort(); window.removeEventListener('merlette:session-expired', expired) }
   }, [logout])
   function accept(session: Session) {
+    generation.current++; controller.current?.abort()
     cache.clear(); localStorage.setItem(TOKEN_KEY, session.token)
-    setSessionError(''); setUser(session.user)
+    setSessionError(''); setLoading(false); setUser(session.user)
   }
   return <AuthContext.Provider value={{ user, loading, sessionError, accept, logout }}>{children}</AuthContext.Provider>
 }
