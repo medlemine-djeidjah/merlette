@@ -1,13 +1,11 @@
 package com.merlette.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class MerletteBackendApplicationTests {
+/** L'application démarre et Flyway applique les migrations. */
+class MerletteBackendApplicationTests extends IntegrationTest {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {
+    }
 }
