@@ -1544,15 +1544,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{serverUrl}}{{photoUrl}}",
-              "host": [
-                "{{serverUrl}}"
-              ],
-              "path": [
-                "{{photoUrl}}"
-              ]
-            }
+            "url": "{{serverUrl}}{{photoUrl}}"
           },
           "event": [
             {
@@ -1641,10 +1633,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json().data;",
-                  "pm.test(\"Uniquement des oiseaux\", () => data.forEach(o => pm.expect(o.category.slug).to.eql(\"oiseaux\")));",
-                  "pm.test(\"Uniquement NEEDS_ID\", () => data.forEach(o => pm.expect(o.status).to.eql(\"NEEDS_ID\")));",
-                  "pm.test(\"Contient notre observation\", () => pm.expect(data.map(o => o.id)).to.include(Number(pm.collectionVariables.get(\"observationId\"))));"
+                  "const rows = pm.response.json().data;",
+                  "pm.test(\"Uniquement des oiseaux\", () => rows.forEach(o => pm.expect(o.category.slug).to.eql(\"oiseaux\")));",
+                  "pm.test(\"Uniquement NEEDS_ID\", () => rows.forEach(o => pm.expect(o.status).to.eql(\"NEEDS_ID\")));",
+                  "pm.test(\"Contient notre observation\", () => pm.expect(rows.map(o => o.id)).to.include(Number(pm.collectionVariables.get(\"observationId\"))));"
                 ]
               }
             }
