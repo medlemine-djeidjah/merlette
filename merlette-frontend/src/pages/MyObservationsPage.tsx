@@ -1,6 +1,5 @@
 // Route : /me/observations — stories #14
 // TODO
 
-export default function MyObservationsPage() {
-  return <h1 className="text-2xl font-bold">MyObservationsPage</h1>
-}
+import ObservationFeed from '../components/observations/ObservationFeed'
+export default function MyObservationsPage() { return <ObservationFeed mine /> }
